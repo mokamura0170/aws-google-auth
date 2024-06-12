@@ -14,3 +14,23 @@ RUN pip3 install -e /build/[u2f]
 
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENTRYPOINT ["aws-google-auth"]
+
+############################################################################
+### for playwright install
+FROM python:3-slim-bullseye as playwright
+COPY setup.py README.rst requirements-playwright.txt /build/
+
+RUN python3 -m venv /build/venv
+RUN . /build/venv/bin/activate \
+    && pip3 install -r /build/requirements-playwright.txt \
+    && playwright install --with-deps chromium
+
+COPY aws_google_auth /build/aws_google_auth
+RUN . /build/venv/bin/activate && pip3 install -e /build/[u2f]
+
+RUN ln -s /build/venv/bin/aws-google-auth /usr/local/bin/aws-google-auth
+RUN ln -s /build/venv/bin/login-playwright /usr/local/bin/login-playwright
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+
+ENTRYPOINT ["aws-google-auth"]
+############################################################################

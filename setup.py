@@ -121,6 +121,7 @@ setup(
     entry_points={
         'console_scripts': [
             'aws-google-auth=aws_google_auth:main',
+            'login-playwright=aws_google_auth:run_playwright'
         ],
     },
 

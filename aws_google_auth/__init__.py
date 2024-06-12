@@ -11,6 +11,8 @@ import keyring
 from six import print_ as print
 from tzlocal import get_localzone
 
+from playwright.sync_api import Playwright, sync_playwright, expect
+
 from aws_google_auth import _version
 from aws_google_auth import amazon
 from aws_google_auth import configuration
@@ -289,6 +291,44 @@ def main():
     cli_args = sys.argv[1:]
     cli(cli_args)
 
+def run_playwright() -> str:
+    saml_text = ""
+    with sync_playwright() as playwright:
+        saml_text = run(playwright)
+    return saml_text
+
+def run(playwright) -> str:
+    loginUrl = "https://accounts.google.com" + "/o/saml2/initsso?idpid={}&spid={}".format(os.getenv('GOOGLE_IDP_ID'), os.getenv('GOOGLE_SP_ID'))
+    # initialize
+    browser = playwright.chromium.launch(headless=True)
+    context = browser.new_context()
+    page = context.new_page()
+    page.goto(loginUrl)
+    #_debug(page, "01_login")
+    # input email
+    page.locator('input[name="identifier"]').fill(os.getenv('GOOGLE_USERNAME'))
+    #_debug(page, "02_input_email")
+    page.click("#identifierNext")
+    # input password
+    page.locator('input[name="Passwd"]').fill(os.getenv('GOOGLE_PASSWORD'))
+    #_debug(page, "03_input_passwd")
+    page.click("#passwordNext")
+    # saml response
+    page.locator("form[id='saml_form']").is_editable()
+    #_debug(page, "04_saml_response")
+    saml_text = page.query_selector("input[name='SAMLResponse']").get_attribute("value")
+
+    # close
+    context.close()
+    browser.close()
+
+    return saml_text
+
+def _debug(page, name):
+    with open(f"./{name}.html", mode='w') as f:
+        print(page.url)
+        #page.screenshot(path=f"./log/{name}.png")
+        f.write(page.content())
 
 if __name__ == '__main__':
     main()
